@@ -1,21 +1,78 @@
 const { checkHealth } = require("./healthcheck");
 
-async function run() {
-  // eslint-disable-next-line no-console
-  const result = await checkHealth(5000, console.log);
+const TIMEOUT = 10_000;
 
+defaultLogger = (message, objectStatus) => {
+  if (!process.env.STRESS_TEST) {
+    console.log(message, objectStatus);
+  }
+};
+
+async function run(uri) {
+  if (!process.env.STRESS_TEST) {
+    console.log("Using bridge:", uri);
+  }
+  const result = await checkHealth(TIMEOUT, defaultLogger, uri);
   if (result.alive) {
-    // eslint-disable-next-line no-console
-    console.log("Bridge is alive, check took", result.durationSeconds, "seconds");
-    process.exit(0);
-  } else {
-    const errorMsg = (result.error && result.error) || "Unknown error";
-    // eslint-disable-next-line no-console
-    console.error("Check failed:", errorMsg);
-    // eslint-disable-next-line no-console
-    console.error(result.error);
-    process.exit(1);
+    return `${uri} is alive, check took, ${result.durationSeconds} seconds`;
+  }
+  if (result.error) {
+    result.error.toString();
+    const msg = result.error.message;
+    return `⚠️ ⚠️ ${uri}: ${msg}⚠️ ⚠️ `;
   }
 }
 
-run();
+tasks = [];
+for (let i = 0; i < 1; i++) {
+  let uri;
+  try {
+    uri = process.argv.slice(2)[0];
+  } catch {}
+
+  if (uri != undefined) {
+    tasks.push(run(uri));
+  } else {
+    const alpha = Array.from(Array(26)).map((e, i) => i + 97);
+    alphabet = alpha.map(x => String.fromCharCode(x));
+    alphabet.push(...["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]);
+    alphabet.push(
+      ...[
+        "uniswap",
+        "ethermine",
+        "enzyme",
+        "pancakeswap",
+        "smoothy",
+        "fei",
+        "polygon",
+        "veefriends",
+        "pooltogether",
+        "opensea",
+        "mirror",
+        "paraswap",
+        "aave",
+        "synthetix",
+        "etherscan",
+        "zora",
+        "zerion",
+        "foundation",
+        "asyncart",
+        "dydx",
+        "defisaver",
+        "radicle",
+        "rarible",
+        "shiba",
+      ],
+    );
+
+    alphabet.forEach(url => {
+      tasks.push(run(`https://${url}.bridge.walletconnect.org`));
+    });
+    tasks.push(run(`https://bridge.walletconnect.org`));
+  }
+}
+
+Promise.all(tasks).then(allResults => {
+  console.log(allResults);
+  process.exit(0);
+});
