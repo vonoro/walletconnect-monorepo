@@ -1,6 +1,6 @@
 const { checkHealth } = require("./healthcheck");
 
-const TIMEOUT = 10_000;
+const TIMEOUT = 5000;
 
 defaultLogger = (message, objectStatus) => {
   if (!process.env.STRESS_TEST) {
