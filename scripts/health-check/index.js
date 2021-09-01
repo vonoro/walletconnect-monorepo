@@ -33,11 +33,6 @@ function defaultLogger(message, objectStatus) {
 }
 
 async function run(uri) {
-  await new Promise(resolve => {
-    setTimeout(() => {
-      resolve();
-    }, 1000);
-  });
   if (!process.env.STRESS_TEST) {
     console.log("Using bridge:", uri); // eslint-disable-line no-console
   }
