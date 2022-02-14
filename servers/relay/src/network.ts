@@ -1,5 +1,5 @@
-import { Logger } from "pino";
-import { generateChildLogger } from "@walletconnect/logger";
+import pino, { Logger } from "pino";
+import { getDefaultLoggerOptions, generateChildLogger } from "@walletconnect/logger";
 import { IJsonRpcProvider } from "@walletconnect/jsonrpc-utils";
 import { JsonRpcProvider } from "@walletconnect/jsonrpc-provider";
 import { HttpConnection } from "@walletconnect/jsonrpc-http-connection";
@@ -37,7 +37,8 @@ export class NetworkService {
 
   constructor(server: HttpService, logger: Logger) {
     this.server = server;
-    this.logger = generateChildLogger(logger, this.context);
+    //this.logger = generateChildLogger(logger, this.context);
+    this.logger = pino(getDefaultLoggerOptions({ level: "trace" }));
     const nodeUrl = this.server.config.waku.url;
     this.provider = this.setJsonRpcProvider(nodeUrl);
     if ((this.server.config.waku.env = NETWORK_ENV.stag)) {
@@ -52,17 +53,18 @@ export class NetworkService {
 
   public publish(topic: string, message: string, opts?: IridiumV1MessageOptions) {
     const method = WAKU_JSONRPC.post.relay.message;
-    const payload = this.encoder.encode(message, opts);
-    const params = [
-      this.namespace,
-      {
-        payload,
-        contentTopic: topic,
-      },
-    ];
-    this.logger.info("Posting Waku Message");
-    this.logger.debug({ type: "method", method: "post", payload: { method, params } });
-    this.request({ method, params });
+    this.encoder.encode(message, opts).then(payload => {
+      const params = [
+        this.namespace,
+        {
+          payload,
+          contentTopic: topic,
+        },
+      ];
+      this.logger.debug({ type: "method", method: "post", payload: { method, params } });
+      this.logger.info("Posting Waku Message");
+      this.request({ method, params });
+    });
   }
 
   public async subscribe(topic: string) {
@@ -124,6 +126,7 @@ export class NetworkService {
     const method = WAKU_JSONRPC.post.relay.subscriptions;
     const topic = this.namespace;
     const params = [[topic]];
+    this.logger.trace({ type: "method", method: "registerNamespace", params });
     this.request({ method, params });
   }
 
